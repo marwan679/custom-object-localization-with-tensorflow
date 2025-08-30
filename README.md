@@ -1,5 +1,3 @@
-# custom-object-localization-with-tensorflow
-
 # Object Localization with TensorFlow
 
 This project demonstrates how to build and train a deep learning model for **object localization** using TensorFlow. The goal is to not only classify an object in an image but also to predict the bounding box coordinates around the object.
@@ -38,17 +36,24 @@ The model is a **multi-output CNN** that predicts:
 ### Example Architecture:
 
 ```python
-model = tf.keras.Sequential([
-    Conv2D(32, (3,3), activation='relu', input_shape=(72, 72, 3)),
-    MaxPool2D(),
-    Conv2D(64, (3,3), activation='relu'),
-    MaxPool2D(),
-    Flatten(),
-    Dense(128, activation='relu'),
-    # Two output layers:
-    Dense(num_classes, activation='softmax', name='class_output'),
-    Dense(4, name='bbox_output')  # [x_min, y_min, x_max, y_max]
-])
+input_ = Input(shape=(144, 144, 3), name='image')
+
+x = input_
+
+for i in range(0, 5):
+  n_filters = 2**(4 + i)
+  x = Conv2D(n_filters, 3, activation='relu')(x)
+  x = BatchNormalization()(x)
+  x = MaxPool2D(2)(x)
+
+x = Flatten()(x)
+x = Dense(256, activation='relu')(x)
+
+class_out = Dense(9, activation='softmax', name='class_out')(x)
+box_out = Dense(2, name='box_out')(x)
+
+model = tf.keras.models.Model(input_, [class_out, box_out])
+model.summary()
 ```
 
 ---
@@ -58,7 +63,7 @@ model = tf.keras.Sequential([
 The total loss is a weighted sum of:
 
 - **Categorical cross-entropy** for classification  
-- **Mean Squared Error (MSE)** for bounding box regression
+- **Mean Squared Error (MSE) and Intersection over union (IOU) ** for bounding box regression
 
 ```python
 def custom_loss(y_true, y_pred):
